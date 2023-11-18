@@ -70,11 +70,13 @@ end
 #################################### continuous events #####################################
 
 const NULL_AFFECT = Equation[]
+const NULL_VECTOR = Vector{Any}()
 struct SymbolicContinuousCallback
     eqs::Vector{Equation}
     affect::Union{Vector{Equation}, FunctionalAffect}
-    function SymbolicContinuousCallback(eqs::Vector{Equation}, affect = NULL_AFFECT)
-        new(eqs, make_affect(affect))
+    opt::Vector{Any}
+    function SymbolicContinuousCallback(eqs::Vector{Equation}, affect = NULL_AFFECT,opt=NULL_VECTOR)
+        new(eqs, make_affect(affect),opt)
     end # Default affect to nothing
 end
 make_affect(affect) = affect
@@ -98,7 +100,9 @@ function to_equation_vector(eqs::Vector{Any})
 end
 
 function SymbolicContinuousCallback(args...)
-    SymbolicContinuousCallback(to_equation_vector.(args)...)
+    eqs=(args[1].first,args[1].second)
+    opt=args[2]
+    SymbolicContinuousCallback(to_equation_vector.(eqs)...,opt)
 end # wrap eq in vector
 SymbolicContinuousCallback(p::Pair) = SymbolicContinuousCallback(p[1], p[2])
 SymbolicContinuousCallback(cb::SymbolicContinuousCallback) = cb # passthrough
@@ -396,6 +400,10 @@ function generate_rootfinding_callback(cbs, sys::AbstractODESystem, dvs = states
         affect = compile_affect(eq_aff, sys, dvs, ps; expression = Val{false}, kwargs...)
     end
 
+    options = map(cbs) do cb # Keep options separate
+        option = cb.opt
+    end
+
     if length(eqs) == 1
         cond = function (u, t, integ)
             if DiffEqBase.isinplace(integ.sol.prob)
@@ -406,7 +414,7 @@ function generate_rootfinding_callback(cbs, sys::AbstractODESystem, dvs = states
                 rf_oop(u, integ.p, t)
             end
         end
-        ContinuousCallback(cond, affect_functions[])
+        ContinuousCallback(cond, affect_functions[],rootfind=options[1][1],interp_points=options[1][2])
     else
         cond = function (out, u, t, integ)
             rf_ip(out, u, integ.p, t)
