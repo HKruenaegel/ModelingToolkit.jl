@@ -100,9 +100,13 @@ function to_equation_vector(eqs::Vector{Any})
 end
 
 function SymbolicContinuousCallback(args...)
-    eqs=(args[1].first,args[1].second)
-    opt=args[2]
-    SymbolicContinuousCallback(to_equation_vector.(eqs)...,opt)
+#    eqs=(args[1].first,args[1].second)
+#    opt=args[2]
+#    SymbolicContinuousCallback(to_equation_vector.(eqs)...,opt)
+eqs=args[1].first
+aff=args[1].second
+opt=args[2]
+SymbolicContinuousCallback(to_equation_vector.(eqs)...,aff,opt)
 end # wrap eq in vector
 SymbolicContinuousCallback(p::Pair) = SymbolicContinuousCallback(p[1], p[2])
 SymbolicContinuousCallback(cb::SymbolicContinuousCallback) = cb # passthrough
@@ -432,7 +436,7 @@ function generate_rootfinding_callback(cbs, sys::AbstractODESystem, dvs = states
                 affect_functions[eq_ind2affect[eq_ind]](integ)
             end
         end
-        VectorContinuousCallback(cond, affect, length(eqs))
+        VectorContinuousCallback(cond, affect, length(eqs),rootfind=options[1][1],interp_points=options[1][2])
     end
 end
 
